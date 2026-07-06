@@ -33,15 +33,15 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
 
 /* ---------- header ---------- */
 #hud{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 4px;gap:8px;z-index:5}
-#hud .stat{font-family:"Baloo 2","Noto Sans TC",sans-serif;font-weight:800;font-size:17px;
-  background:rgba(0,0,0,.25);border:1px solid var(--felt-line);border-radius:999px;padding:6px 14px;white-space:nowrap}
+#hud .stat{font-family:"Baloo 2","Noto Sans TC",sans-serif;font-weight:800;font-size:14px;
+  background:rgba(0,0,0,.25);border:1px solid var(--felt-line);border-radius:999px;padding:4px 12px;white-space:nowrap}
 #hud .stat b{color:var(--gold)}
 #bossBanner{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);
   border:1px solid var(--gold-deep);border-radius:999px;padding:3px 12px 3px 4px}
-#bossBanner img{width:46px;height:46px;border-radius:50%;background:var(--ivory);border:2px solid var(--gold)}
+#bossBanner img{width:32px;height:32px;border-radius:50%;background:var(--ivory);border:2px solid var(--gold)}
 #bossBanner .crown{position:absolute;font-size:13px;transform:translate(20px,-16px) rotate(18deg)}
-#bossBanner .who{font-size:14px;line-height:1.2}
-#bossBanner .who b{color:var(--gold);font-size:17px}
+#bossBanner .who{font-size:12px;line-height:1.15}
+#bossBanner .who b{color:var(--gold);font-size:14px}
 #bossWrap{position:relative}
 
 /* ---------- board ---------- */
@@ -88,14 +88,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
 /* ---------- tools ---------- */
 #tools{display:flex;justify-content:center;gap:14px;padding:0 10px 12px;z-index:6}
 .toolBtn{
-  font-family:inherit;font-weight:800;font-size:16px;color:var(--paper);
+  font-family:inherit;font-weight:700;font-size:13px;color:var(--paper);
   background:linear-gradient(180deg,#2a6f5c,#1c5245);border:1px solid #3f9077;border-radius:14px;
-  padding:12px 18px;cursor:pointer;box-shadow:0 4px 0 #0d2e26;display:flex;align-items:center;gap:7px;
+  padding:8px 16px;cursor:pointer;box-shadow:0 3px 0 #0d2e26;display:flex;align-items:center;gap:6px;
 }
 .toolBtn:active{transform:translateY(2px);box-shadow:0 1px 0 #0d2e26}
 .toolBtn.used{opacity:.35;pointer-events:none;filter:grayscale(1)}
-.toolBtn .ic{font-size:20px}
-#btnHome{border-radius:50%;width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(0,0,0,.25);border:1px solid var(--felt-line);cursor:pointer;box-shadow:none}
+.toolBtn .ic{font-size:16px}
+#btnHome{border-radius:50%;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;background:rgba(0,0,0,.25);border:1px solid var(--felt-line);cursor:pointer;box-shadow:none}
 
 /* ---------- overlays ---------- */
 .overlay{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
@@ -167,10 +167,10 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
   <div id="trayZone"><div id="tray"></div></div>
 
   <div id="tools">
-    <button class="toolBtn" id="btnUndo"><span class="ic">↩️</span>退回</button>
+    <button class="toolBtn" id="btnUndo"><span class="ic">↩️</span>悔步</button>
     <button class="toolBtn" id="btnPop"><span class="ic">📤</span>彈出三張</button>
     <button class="toolBtn" id="btnShuffle"><span class="ic">🔀</span>洗牌</button>
-    <button class="toolBtn" id="btnRedeal"><span class="ic">🔄</span>重發</button>
+    <button class="toolBtn" id="btnRedeal"><span class="ic">🔄</span>重玩</button>
   </div>
 
   <div id="toast"></div>
@@ -702,7 +702,7 @@ function startLevel(lv){
   $("#inBossName").textContent=boss.name;
   $("#inBossTrait").textContent=lv===LEVELS?"？？？":boss.trait;
   $("#inTaunt").textContent=bossLine(boss,"intro");
-  const toolNames={undo:"↩️退回",pop:"📤彈出三張",shuffle:"🔀洗牌"};
+  const toolNames={undo:"↩️悔步",pop:"📤彈出三張",shuffle:"🔀洗牌"};
   const have=Object.keys(S.tools).filter(k=>S.tools[k]).map(k=>toolNames[k]).join("　");
   let tip="🧰 本關工具："+have;
   if(S.conf.deepFog) tip+="\n⚠️ 濃霧關卡 —— 只有完全露出嘅牌先睇得見！";
