@@ -178,7 +178,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
   <!-- start screen -->
   <div class="overlay show" id="ovStart">
     <div class="card">
-      <h1>貓貓疊疊樂</h1>
+      <h1 id="gameTitle">貓貓疊疊樂</h1>
       <div class="sub">Neko Stack · 三消疊層挑戰</div>
       <div class="rosterRow" id="startRoster"></div>
       <div class="sub" style="margin-top:2px">八位貓主子輪流坐鎮做關主。<br>點選最上層的牌，集齊三張相同即可消除。<br>底部牌架只有 7 格 —— 塞滿就輸！</div>
@@ -221,6 +221,25 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
       <div class="btnRow">
         <button class="bigBtn" id="btnRetry">再挑戰</button>
         <button class="bigBtn green" id="btnMenu">回主選單</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- dev: level select (7-tap + passcode) -->
+  <div class="overlay" id="ovDev">
+    <div class="card">
+      <div id="devGate">
+        <h2>🔧 測試模式</h2>
+        <div class="sub">輸入密碼</div>
+        <input id="devCode" type="password" inputmode="numeric" maxlength="8" style="width:60%;font-family:inherit;font-size:20px;font-weight:800;text-align:center;letter-spacing:.3em;
+          padding:10px;border-radius:12px;border:2px solid var(--tile-side);background:#fff;color:var(--ink);margin:6px 0 16px">
+        <div class="btnRow"><button class="bigBtn" id="btnDevOk">確認</button><button class="bigBtn green" id="btnDevCancel">取消</button></div>
+      </div>
+      <div id="devPanel" style="display:none">
+        <h2>🔧 選關</h2>
+        <div class="sub">直接跳到任何一關（測試用）</div>
+        <div id="devGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0 16px"></div>
+        <div class="btnRow"><button class="bigBtn green" id="btnDevClose">關閉</button></div>
       </div>
     </div>
   </div>
@@ -349,6 +368,7 @@ let totalScore = 0, curLevel = 1;
 const SAVE_KEY = "nekoStackSave.v3";
 function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{}}catch(e){return{}}}
 function save(extra){
+  if(devRun)return;
   const old=loadSave();
   localStorage.setItem(SAVE_KEY,JSON.stringify({
     level:curLevel,score:totalScore,
@@ -544,7 +564,7 @@ function render(){
     board.appendChild(el);
   });
   renderTray();
-  $("#hudLevel").textContent=S.lv;
+  $("#hudLevel").textContent=(devRun?"🔧":"")+S.lv;
   $("#hudScore").textContent=totalScore+S.score;
 }
 function renderTray(){
@@ -729,7 +749,7 @@ function winLevel(){
   const sv0=loadSave();
   const bests={bestLevel:Math.max(S.lv,sv0.bestLevel||0),bestScore:Math.max(totalScore,sv0.bestScore||0)};
   curLevel++;save(bests);
-  submitScore();
+  if(!devRun)submitScore();
   if(curLevel>LEVELS){allClear();return}
   show("#ovWin");
 }
@@ -745,13 +765,13 @@ function allClear(){
   $("#aTotal").textContent=totalScore;
   const r=$("#allRoster");r.innerHTML="";
   CATS.forEach(c=>{const im=document.createElement("img");im.src=CAT_IMG[c.id];r.appendChild(im)});
-  const sv=loadSave();localStorage.setItem(SAVE_KEY,JSON.stringify({level:1,score:0,best:Math.max(totalScore,sv.best||0),bestLevel:sv.bestLevel||0,bestScore:sv.bestScore||0}));
+  if(!devRun){const sv=loadSave();localStorage.setItem(SAVE_KEY,JSON.stringify({level:1,score:0,best:Math.max(totalScore,sv.best||0),bestLevel:sv.bestLevel||0,bestScore:sv.bestScore||0}));}
   show("#ovAll");
 }
 $("#btnNext").addEventListener("click",()=>startLevel(curLevel));
 $("#btnRetry").addEventListener("click",()=>{startLevel(curLevel)});
 $("#btnMenu").addEventListener("click",()=>{initStart();show("#ovStart")});
-$("#btnAgain").addEventListener("click",()=>{totalScore=0;startLevel(1)});
+$("#btnAgain").addEventListener("click",()=>{devRun=false;totalScore=0;startLevel(1)});
 
 function initStart(){
   const r=$("#startRoster");r.innerHTML="";
@@ -762,8 +782,8 @@ function initStart(){
   }else{$("#btnContinue").style.display="none"}
   $("#bestTip").textContent=sv.best?`🏅 最高總分：${sv.best}`:"提示：關主牌有 👑，集齊三張有驚喜！";
 }
-$("#btnStart").addEventListener("click",()=>{totalScore=0;startLevel(1)});
-$("#btnContinue").addEventListener("click",()=>{const sv=loadSave();totalScore=sv.score||0;startLevel(sv.level)});
+$("#btnStart").addEventListener("click",()=>{devRun=false;totalScore=0;startLevel(1)});
+$("#btnContinue").addEventListener("click",()=>{devRun=false;const sv=loadSave();totalScore=sv.score||0;startLevel(sv.level)});
 
 
 /* ================= SHARED LEADERBOARD (Supabase REST) ================= */
@@ -836,6 +856,50 @@ $("#btnRedeal").addEventListener("click",()=>{
   startLevel(curLevel); // fresh random deal + fresh tool roll
   toast("🔄 重新發牌！");
 });
+
+
+/* ================= DEV MODE: 7 taps on title + passcode ================= */
+const DEV_CODE="2688";
+let devRun=false; // change anytime; note: visible in page source, casual protection only
+let tapCount=0, tapTimer=null;
+$("#gameTitle").addEventListener("pointerdown",()=>{
+  tapCount++;
+  clearTimeout(tapTimer);
+  tapTimer=setTimeout(()=>{tapCount=0},1200);
+  if(tapCount>=7){
+    tapCount=0;
+    $("#devGate").style.display="";
+    $("#devPanel").style.display="none";
+    $("#devCode").value="";
+    show("#ovDev");
+    setTimeout(()=>$("#devCode").focus(),200);
+  }
+});
+function devUnlock(){
+  if($("#devCode").value!==DEV_CODE){
+    const c=$("#devCode");c.value="";
+    c.style.borderColor="var(--rose)";
+    setTimeout(()=>c.style.borderColor="var(--tile-side)",600);
+    return;
+  }
+  $("#devGate").style.display="none";
+  $("#devPanel").style.display="";
+  const g=$("#devGrid");g.innerHTML="";
+  const sv=loadSave();
+  for(let lv=1;lv<=LEVELS;lv++){
+    const b=document.createElement("button");
+    b.className="bigBtn green";
+    b.style.cssText="font-size:15px;padding:10px 0;box-shadow:0 3px 0 #113d2f";
+    b.textContent=lv;
+    if(lv===(sv.level||1))b.style.outline="3px solid var(--gold)";
+    b.addEventListener("click",()=>{devRun=true;totalScore=0;startLevel(lv);toast("🔧 測試模式：不影響進度同排行榜")});
+    g.appendChild(b);
+  }
+}
+$("#btnDevOk").addEventListener("click",devUnlock);
+$("#devCode").addEventListener("keydown",e=>{if(e.key==="Enter")devUnlock()});
+$("#btnDevCancel").addEventListener("click",()=>{initStart();show("#ovStart")});
+$("#btnDevClose").addEventListener("click",()=>{initStart();show("#ovStart")});
 
 window.addEventListener("resize",()=>{if(S&&!S.over)render()});
 initStart();
