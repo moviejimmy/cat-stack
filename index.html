@@ -224,7 +224,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
       <div class="sub">Neko Stack · 三消疊層挑戰</div>
       <div class="rosterRow" id="startRoster"></div>
       <div class="sub" style="margin-top:2px">八位貓主子輪流坐鎮做關主。<br>點選最上層的牌，集齊三張相同即可消除。<br>底部牌架只有 7 格 —— 塞滿就輸！</div>
-      <div class="btnRow"><button class="bigBtn" id="btnStart">開始遊戲</button><button class="bigBtn green" id="btnContinue" style="display:none">繼續 第<span id="contLv"></span>關</button></div>
+      <div class="btnRow"><button class="bigBtn" id="btnContinue" style="display:none">▶ 繼續 第<span id="contLv"></span>關</button><button class="bigBtn green" id="btnStart">開始遊戲</button></div>
       <div class="btnRow" style="margin-top:10px"><button class="bigBtn green" id="btnBoard" style="font-size:15px;padding:9px 20px">🏆 排行榜</button></div>
       <div class="tip" id="bestTip"></div>
     </div>
@@ -303,10 +303,10 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
   <div class="overlay" id="ovName">
     <div class="card">
       <h2>你嘅暱稱</h2>
-      <div class="sub">會顯示喺共享排行榜上</div>
+      <div class="sub" id="nameSub">會顯示喺共享排行榜上</div>
       <input id="nameInput" maxlength="12" style="width:80%;font-family:inherit;font-size:18px;font-weight:700;text-align:center;
         padding:10px;border-radius:12px;border:2px solid var(--tile-side);background:#fff;color:var(--ink);margin:6px 0 16px" placeholder="例如：鏟屎官一號">
-      <div class="btnRow"><button class="bigBtn" id="btnNameSave">儲存</button></div>
+      <div class="btnRow"><button class="bigBtn" id="btnNameSave">儲存</button><button class="bigBtn green" id="btnNameSkip" style="display:none">遲啲先</button></div>
     </div>
   </div>
 
@@ -882,8 +882,16 @@ function winLevel(){
   const sv0=loadSave();
   const bests={bestLevel:Math.max(S.lv,sv0.bestLevel||0),bestScore:Math.max(totalScore,sv0.bestScore||0)};
   curLevel++;save(bests);
+  const done=curLevel>LEVELS;
+  if(!devRun && SB_ON && !playerName() && !declinedName){
+    afterName = done? "all" : "win";
+    $("#nameSub").textContent="🎉 恭喜過關！留低個名，上埋共享排行榜";
+    $("#btnNameSkip").style.display="";
+    openNameDialog();
+    return;
+  }
   if(!devRun)submitScore();
-  if(curLevel>LEVELS){allClear();return}
+  if(done){allClear();return}
   show("#ovWin");
 }
 function loseLevel(){
@@ -910,9 +918,10 @@ function initStart(){
   const r=$("#startRoster");r.innerHTML="";
   CATS.forEach(c=>{const im=document.createElement("img");im.src=CAT_IMG[c.id];im.title=c.name;r.appendChild(im)});
   const sv=loadSave();
-  if(sv.level&&sv.level>1&&sv.level<=LEVELS){
-    $("#btnContinue").style.display="";$("#contLv").textContent=sv.level;
-  }else{$("#btnContinue").style.display="none"}
+  const hasRun = sv.level&&sv.level>1&&sv.level<=LEVELS;
+  $("#btnContinue").style.display = hasRun? "" : "none";
+  if(hasRun)$("#contLv").textContent=sv.level;
+  $("#btnStart").style.display = hasRun? "none" : "";
   $("#bestTip").textContent=sv.best?`🏅 最高總分：${sv.best}`:"提示：關主牌有 👑，集齊三張有驚喜！";
 }
 $("#btnStart").addEventListener("click",()=>{devRun=false;totalScore=0;startLevel(1)});
@@ -930,12 +939,12 @@ function deviceId(){
   return d;
 }
 function playerName(){return localStorage.getItem("nekoStackName")||""}
-let pendingSubmit=false;
+let pendingSubmit=false, afterName=null, declinedName=false;
 async function submitScore(){
   if(!SB_ON)return;
   const sv=loadSave();
   const nm=playerName();
-  if(!nm){pendingSubmit=true;openNameDialog();return}
+  if(!nm){if(declinedName)return;pendingSubmit=true;openNameDialog();return}
   const body={device_id:deviceId(),name:nm,best_level:sv.bestLevel||0,best_score:sv.bestScore||0};
   try{
     await fetch(SB_URL+"/rest/v1/stack_scores?on_conflict=device_id",{
@@ -968,6 +977,7 @@ async function openBoard(){
   }catch(e){list.innerHTML='<div style="text-align:center;opacity:.7;padding:16px 0">載入失敗，遲啲再試</div>'}
 }
 function openNameDialog(){
+  if(!afterName){$("#nameSub").textContent="會顯示喺共享排行榜上";$("#btnNameSkip").style.display="none"}
   $("#nameInput").value=playerName();
   show("#ovName");
   setTimeout(()=>$("#nameInput").focus(),200);
@@ -976,8 +986,19 @@ $("#btnNameSave").addEventListener("click",()=>{
   const v=$("#nameInput").value.trim().slice(0,12);
   if(!v)return;
   localStorage.setItem("nekoStackName",v);
+  if(afterName){
+    const a=afterName;afterName=null;
+    submitScore();
+    if(a==="all")allClear();else show("#ovWin");
+    return;
+  }
   show(null);
   if(pendingSubmit){pendingSubmit=false;submitScore()}
+});
+$("#btnNameSkip").addEventListener("click",()=>{
+  declinedName=true; // won't nag again this session; ✏️ in the leaderboard still works
+  const a=afterName;afterName=null;
+  if(a==="all")allClear();else if(a==="win")show("#ovWin");else show(null);
 });
 $("#btnBoard").addEventListener("click",openBoard);
 $("#btnBoardClose").addEventListener("click",()=>{initStart();show("#ovStart")});
