@@ -70,10 +70,45 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
 .tile.flying{transition:left .32s cubic-bezier(.5,.1,.3,1.2), top .32s cubic-bezier(.5,.1,.3,1.2), width .32s, height .32s;z-index:900 !important}
 @keyframes popOut{0%{transform:scale(1)}45%{transform:scale(1.22) rotate(-4deg)}100%{transform:scale(0);opacity:0}}
 .tile.matched{animation:popOut .38s ease forwards}
+.morphing{animation:liftMorph 1.5s cubic-bezier(.35,1.2,.4,1) forwards;
+  outline:4px solid var(--rose);outline-offset:1px;
+  box-shadow:0 0 20px 6px rgba(230,100,122,.75), 0 var(--lift) 0 var(--tile-side) !important;
+  filter:none !important;pointer-events:none}
+@keyframes liftMorph{
+  0%{transform:translateY(0) scale(1) rotate(0)}
+  22%{transform:translateY(-34px) scale(1.28) rotate(-5deg)}
+  50%{transform:translateY(-38px) scale(1.3) rotate(4deg)}
+  78%{transform:translateY(-34px) scale(1.28) rotate(-2deg)}
+  100%{transform:translateY(0) scale(1) rotate(0)}}
+.morphing .faceOld{opacity:1;transition:opacity .45s ease}
+.morphing.morphed .faceOld{opacity:0}
+.morphing>.face:first-child{opacity:0;transition:opacity .45s ease}
+.morphing.morphed>.face:first-child{opacity:1}
+.stealPaw{position:absolute;z-index:960;font-size:46px;pointer-events:none;
+  animation:pawSwipe .8s cubic-bezier(.3,1.3,.5,1) forwards;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+@keyframes pawSwipe{0%{transform:scale(.2) rotate(-40deg);opacity:0}
+  30%{transform:scale(1.5) rotate(10deg);opacity:1}
+  60%{transform:scale(1.2) rotate(-6deg);opacity:1}
+  100%{transform:scale(.8) rotate(0);opacity:0}}
+#stealDim{position:absolute;inset:0;z-index:940;background:rgba(6,20,16,.62);
+  opacity:0;transition:opacity .35s ease}
+#stealDim.on{opacity:1}
+.stealBanner{position:absolute;left:50%;top:-8px;transform:translate(-50%,10px);z-index:945;
+  display:flex;align-items:center;gap:7px;pointer-events:none;white-space:nowrap;
+  background:linear-gradient(170deg,#fffdf4,#f6e8c8);color:var(--ink);
+  border:2px solid var(--rose);border-radius:999px;padding:8px 18px;font-weight:900;font-size:15px;
+  box-shadow:0 4px 0 rgba(181,54,77,.4),0 8px 20px rgba(0,0,0,.45);
+  opacity:0;transition:opacity .35s ease,transform .35s ease}
+.stealBanner.on{opacity:1;transform:translate(-50%,0)}
+.stealBanner .vf{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--ivory-edge);border-radius:9px;overflow:hidden}
+.stealBanner .vf img{width:88%;height:88%;object-fit:contain}
+.stealBanner .vf .emo{font-size:24px;line-height:1}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 
 /* ---------- tray ---------- */
-#trayZone{padding:6px 10px 10px;z-index:6}
+#trayZone{padding:6px 10px 10px;z-index:6;position:relative}
 #tray{
   height:calc(var(--tile) + 18px);border-radius:16px;position:relative;
   background:linear-gradient(180deg,#0e332a,#0a271f);
@@ -164,7 +199,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
 
   <div id="boardWrap"><div id="board"></div></div>
 
-  <div id="trayZone"><div id="tray"></div></div>
+  <div id="trayZone">
+    <div id="misBadge" style="display:none;align-items:center;justify-content:center;gap:6px;margin-bottom:5px;
+      font-weight:800;font-size:13px;color:var(--paper)">
+      <img id="misImg" style="width:24px;height:24px;border-radius:50%;background:var(--ivory);border:2px solid var(--rose)">
+      <span id="misLabel"></span><b id="misCount" style="color:var(--rose);font-size:16px"></b>
+    </div>
+    <div id="tray"></div>
+  </div>
 
   <div id="tools">
     <button class="toolBtn" id="btnUndo"><span class="ic">↩️</span>悔步</button>
@@ -316,7 +358,8 @@ const TIPS = [
  "同款牌喺架上有兩張時，優先搵第三張。",
  "埋得深嘅牌會反轉 —— 掘落去先知底牌。",
  "關主匿咗喺深層，愈危急先愈幫到你。",
- "濃霧關：被冚住嘅牌一律反轉，只信表層。"
+ "濃霧關：被冚住嘅牌一律反轉，只信表層。",
+ "搗蛋貓最鍾意偷枱面成雙嘅牌 —— 早啲夾走佢！"
 ];
 const LEVELS = 20;
 const TRAY_SIZE = 7;
@@ -359,7 +402,7 @@ function levelConf(lv){
   const i=Math.min(lv,LEVELS)-1;
   return {types:CFG.types[i], triples:CFG.triples[i], layers:CFG.layers[i],
           blind:CFG.blind[i], stackB: lv>=2 ? CFG.blind[i] : 0,
-          fog:true, deepFog:DEEP_FOG.has(lv), deepBurial: lv>=4};
+          fog:true, deepFog:DEEP_FOG.has(lv), deepBurial: lv>=4, mischief: lv>=11};
 }
 
 /* ================= STATE ================= */
@@ -384,11 +427,17 @@ function generateLevel(lv){
   const rng = mulberry32((lv*7919 + Math.floor(Math.random()*0x7fffffff))|0);
   const bossId = lv===LEVELS ? 7 : ((lv-1)%8)+1; // 咪咪 — the boss nobody expected
 
-  // roster: boss + other cats + fillers
-  const otherCats = CATS.filter(c=>c.id!==bossId).map(c=>"c"+c.id);
+  // bad kitty: random cat (never the boss), re-rolled every attempt
+  let badId=0;
+  if(conf.mischief){
+    const others=CATS.filter(c=>c.id!==bossId);
+    badId=others[Math.floor(Math.random()*others.length)].id;
+  }
+  // roster: boss (+ thief) + other cats + fillers
+  const otherCats = CATS.filter(c=>c.id!==bossId&&c.id!==badId).map(c=>"c"+c.id);
   shuffleArr(otherCats,rng);
   const fill = FILLERS.slice(); shuffleArr(fill,rng);
-  const roster = ["c"+bossId];
+  const roster = badId? ["c"+bossId,"c"+badId] : ["c"+bossId];
   const pool = otherCats.concat(fill.map(e=>"e"+e));
   // interleave: prefer some cats, some fillers
   for(let i=0;roster.length<conf.types;i++) roster.push(pool[i]);
@@ -477,8 +526,9 @@ function generateLevel(lv){
     tools[drop]=false;
   }
 
-  return {lv, conf, bossId, tiles, tray:[], history:[], score:0,
-          tools, over:false, W, H};
+  return {lv, conf, bossId, badId, tiles, tray:[], history:[], score:0,
+          tools, over:false, W, H,
+          mis: badId? {interval:30, counter:30} : null};
 }
 
 /* blocking rules */
@@ -563,6 +613,51 @@ function render(){
     if(!blocked)el.addEventListener("pointerdown",()=>pick(t.id),{passive:true});
     board.appendChild(el);
   });
+  if(S.misMorph){
+    const m=S.misMorph; S.misMorph=null;
+    const badName=CATS[S.badId-1].name;
+    const el=board.querySelector('[data-id="'+m.id+'"]');
+    if(el){
+      const dim=document.createElement("div");
+      dim.id="stealDim";
+      $("#boardWrap").appendChild(dim);
+      requestAnimationFrame(()=>dim.classList.add("on"));
+      const ban=document.createElement("div");
+      ban.className="stealBanner";
+      ban.innerHTML='😼 '+badName+'偷咗你嘅 <span class="vf">'+typeFace(m.victimType)+'</span>！';
+      $("#trayZone").appendChild(ban);
+      requestAnimationFrame(()=>ban.classList.add("on"));
+      setTimeout(()=>{ban.classList.remove("on");setTimeout(()=>ban.remove(),400)},3600);
+      const paw=document.createElement("div");
+      paw.className="stealPaw";paw.textContent="🐾";
+      paw.style.left=el.style.left;paw.style.top=el.style.top;
+      board.appendChild(paw);setTimeout(()=>paw.remove(),1000);
+      el.style.zIndex=955;
+      el.classList.remove("bossTile");
+      const oldFace=document.createElement("div");
+      oldFace.className="face faceOld";
+      oldFace.innerHTML=typeFace(m.victimType);
+      oldFace.style.cssText="position:absolute;inset:9%;width:auto;height:auto";
+      el.appendChild(oldFace);
+      el.classList.add("morphing");
+      setTimeout(()=>el.classList.add("morphed"),650);
+      setTimeout(()=>{
+        dim.classList.remove("on");
+        setTimeout(()=>dim.remove(),380);
+        S.morphLock=false;render();
+      },1550);
+    }else{S.morphLock=false}
+  }
+  const badge=$("#misBadge");
+  if(S.mis){
+    const canSteal=S.tiles.some(t=>t.state==="board"&&!t.stack&&t.type==="c"+S.badId&&isBlocked(t));
+    if(canSteal){
+      badge.style.display="flex";
+      $("#misImg").src=CAT_IMG[S.badId];
+      $("#misLabel").textContent=CATS[S.badId-1].name+"出手倒數：";
+      $("#misCount").textContent=S.mis.counter;
+    }else badge.style.display="none";
+  }else badge.style.display="none";
   renderTray();
   $("#hudLevel").textContent=(devRun?"🔧":"")+S.lv;
   $("#hudScore").textContent=totalScore+S.score;
@@ -589,7 +684,7 @@ function renderTray(){
 
 /* ================= GAME ACTIONS ================= */
 function pick(id){
-  if(S.over)return;
+  if(S.over||S.morphLock)return;
   const t=S.tiles.find(x=>x.id===id);
   if(!t||t.state!=="board"||isBlocked(t))return;
   if(S.tray.length>=TRAY_SIZE)return;
@@ -600,6 +695,10 @@ function pick(id){
   for(let i=S.tray.length-1;i>=0;i--){if(S.tray[i].type===t.type){idx=i;break}}
   if(idx>=0)S.tray.splice(idx+1,0,t);else S.tray.push(t);
   S.history.push(t.id);
+  if(S.mis){
+    S.mis.counter--;
+    if(S.mis.counter<=0){S.mis.counter=S.mis.interval;S.pendingMis=true}
+  }
   // check triple
   const same=S.tray.filter(x=>x.type===t.type);
   if(same.length>=3){
@@ -611,6 +710,38 @@ function pick(id){
   }
   afterMove();
 }
+
+/* ================= 搗蛋貓 STEALS (L11+) ================= */
+function doSteal(){
+  const badType="c"+S.badId;
+  // thief needs a HIDDEN tile of her own to pop out from
+  const hiddenBad=S.tiles.filter(t=>t.state==="board"&&!t.stack&&t.type===badType&&isBlocked(t));
+  if(!hiddenBad.length)return; // she's fully exposed: retired from crime
+  const free=S.tiles.filter(t=>t.state==="board"&&!t.stack&&t.type!==badType&&!isBlocked(t));
+  if(!free.length)return;
+  // triple-breaking: target the type with the MOST exposed copies (needs ≥2); fallback random
+  const byType={};
+  free.forEach(t=>{(byType[t.type]=byType[t.type]||[]).push(t)});
+  const cand=Object.keys(byType).filter(k=>byType[k].length>=2);
+  let victim;
+  if(cand.length){
+    const maxN=Math.max(...cand.map(k=>byType[k].length));
+    const best=cand.filter(k=>byType[k].length===maxN);
+    const k=best[Math.floor(Math.random()*best.length)];
+    victim=byType[k][Math.floor(Math.random()*byType[k].length)];
+  }else{
+    victim=free[Math.floor(Math.random()*free.length)];
+  }
+  const d=hiddenBad[Math.floor(Math.random()*hiddenBad.length)];
+  const victimType=victim.type;
+  [d.x,victim.x]=[victim.x,d.x];[d.y,victim.y]=[victim.y,d.y];[d.z,victim.z]=[victim.z,d.z];
+  S.misMorph={id:d.id, victimType};
+  S.morphLock=true;
+  beep(520,.18,"sine",.1);
+  beep(392,.12,"square",.09,.55);
+  beep(740,.2,"triangle",.11,.8);
+}
+
 function bossBonus(){
   sfx.boss();
   S.score+=60;
@@ -651,6 +782,7 @@ function bossBonus(){
   pawBurst();
 }
 function afterMove(){
+  if(S.pendingMis){S.pendingMis=false;doSteal()}
   render();save();
   const left=S.tiles.filter(t=>t.state==="board").length;
   if(left===0 && S.tray.length===0){winLevel();return}
@@ -662,7 +794,7 @@ function afterMove(){
 
 /* tools */
 $("#btnUndo").addEventListener("click",()=>{
-  if(!S.tools.undo||S.over||!S.history.length)return;
+  if(!S.tools.undo||S.over||S.morphLock||!S.history.length)return;
   const id=S.history.pop();
   const t=S.tiles.find(x=>x.id===id);
   if(!t)return;
@@ -672,7 +804,7 @@ $("#btnUndo").addEventListener("click",()=>{
   S.tools.undo=false;sfx.tool();render();
 });
 $("#btnPop").addEventListener("click",()=>{
-  if(!S.tools.pop||S.over||S.tray.length<1)return;
+  if(!S.tools.pop||S.over||S.morphLock||S.tray.length<1)return;
   // eject up to 3 tiles back to board top layer front
   const n=Math.min(3,S.tray.length);
   const maxZ=Math.max(0,...S.tiles.filter(t=>t.state==="board"&&!t.stack).map(t=>t.z))+1;
@@ -685,7 +817,7 @@ $("#btnPop").addEventListener("click",()=>{
   S.tools.pop=false;sfx.tool();render();
 });
 $("#btnShuffle").addEventListener("click",()=>{
-  if(!S.tools.shuffle||S.over)return;
+  if(!S.tools.shuffle||S.over||S.morphLock)return;
   const onBoard=S.tiles.filter(t=>t.state==="board");
   const types=onBoard.map(t=>t.type);
   for(let i=types.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[types[i],types[j]]=[types[j],types[i]]}
@@ -725,6 +857,7 @@ function startLevel(lv){
   const toolNames={undo:"↩️悔步",pop:"📤彈出三張",shuffle:"🔀洗牌"};
   const have=Object.keys(S.tools).filter(k=>S.tools[k]).map(k=>toolNames[k]).join("　");
   let tip="🧰 本關工具："+have;
+  if(S.mis) tip+="\n😼 搗蛋貓 "+CATS[S.badId-1].name+" 混咗入嚟！每 "+S.mis.interval+" 步偷你一張牌";
   if(S.conf.deepFog) tip+="\n⚠️ 濃霧關卡 —— 只有完全露出嘅牌先睇得見！";
   tip+="\n💡 "+TIPS[(lv-1)%TIPS.length];
   $("#inTip").textContent=tip;
@@ -851,7 +984,7 @@ $("#btnBoardClose").addEventListener("click",()=>{initStart();show("#ovStart")})
 $("#btnEditName").addEventListener("click",openNameDialog);
 $("#btnHome").addEventListener("click",()=>{initStart();show("#ovStart")});
 $("#btnRedeal").addEventListener("click",()=>{
-  if(!S)return;
+  if(!S||S.morphLock)return;
   sfx.tool();
   startLevel(curLevel); // fresh random deal + fresh tool roll
   toast("🔄 重新發牌！");
