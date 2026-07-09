@@ -229,7 +229,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
       <div class="rosterRow" id="startRoster"></div>
       <div class="sub" style="margin-top:2px">八位貓主子輪流坐鎮做關主。<br>點選最上層的牌，集齊三張相同即可消除。<br>底部牌架只有 7 格 —— 塞滿就輸！</div>
       <div class="btnRow"><button class="bigBtn" id="btnContinue" style="display:none">▶ 繼續 第<span id="contLv"></span>關</button><button class="bigBtn green" id="btnStart">開始遊戲</button></div>
-      <div class="btnRow" style="margin-top:10px"><button class="bigBtn green" id="btnBoard" style="font-size:15px;padding:9px 20px">🏆 排行榜</button></div>
+      <div class="btnRow" style="margin-top:10px"><button class="bigBtn green" id="btnBoard" style="font-size:15px;padding:9px 20px">🏆 排行榜</button><button class="bigBtn green" id="btnRestore" style="font-size:15px;padding:9px 20px">📲 攞返進度</button></div>
       <div class="tip" id="bestTip"></div>
     </div>
   </div>
@@ -303,13 +303,30 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
     </div>
   </div>
 
+  <!-- restore progress -->
+  <div class="overlay" id="ovRestore">
+    <div class="card">
+      <h2>📲 攞返進度</h2>
+      <div class="sub">輸入你嘅暱稱同取回碼</div>
+      <input id="rName" maxlength="12" style="width:80%;font-family:inherit;font-size:18px;font-weight:700;text-align:center;
+        padding:10px;border-radius:12px;border:2px solid var(--tile-side);background:#fff;color:var(--ink);margin:6px 0 10px" placeholder="暱稱">
+      <input id="rPin" maxlength="4" type="tel" inputmode="numeric" pattern="[0-9]*" style="width:52%;font-family:inherit;font-size:18px;font-weight:800;text-align:center;letter-spacing:.4em;
+        padding:10px;border-radius:12px;border:2px solid var(--tile-side);background:#fff;color:var(--ink);margin:0 0 14px" placeholder="取回碼">
+      <div class="sub" id="rMsg" style="min-height:18px;color:#b5364d;font-weight:700"></div>
+      <div class="btnRow"><button class="bigBtn" id="btnRestoreGo">攞返</button><button class="bigBtn green" id="btnRestoreCancel">取消</button></div>
+    </div>
+  </div>
+
   <!-- nickname -->
   <div class="overlay" id="ovName">
     <div class="card">
       <h2>你嘅暱稱</h2>
       <div class="sub" id="nameSub">會顯示喺共享排行榜上</div>
       <input id="nameInput" maxlength="12" style="width:80%;font-family:inherit;font-size:18px;font-weight:700;text-align:center;
-        padding:10px;border-radius:12px;border:2px solid var(--tile-side);background:#fff;color:var(--ink);margin:6px 0 16px" placeholder="例如：鏟屎官一號">
+        padding:10px;border-radius:12px;border:2px solid var(--tile-side);background:#fff;color:var(--ink);margin:6px 0 10px" placeholder="例如：鏟屎官一號">
+      <input id="pinInput" maxlength="4" type="tel" inputmode="numeric" pattern="[0-9]*" style="width:52%;font-family:inherit;font-size:18px;font-weight:800;text-align:center;letter-spacing:.4em;
+        padding:10px;border-radius:12px;border:2px solid var(--tile-side);background:#fff;color:var(--ink);margin:0 0 6px" placeholder="4位取回碼">
+      <div class="sub" style="font-size:12px;margin:0 0 12px">取回碼用嚟換手機或重置後攞返進度</div>
       <div class="btnRow"><button class="bigBtn" id="btnNameSave">儲存</button><button class="bigBtn green" id="btnNameSkip" style="display:none">遲啲先</button></div>
     </div>
   </div>
@@ -328,6 +345,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
 
 <script>
 "use strict";
+const GAME_VERSION="20260709-124235";
 /* ================= DATA ================= */
 const CAT_IMG = {
 1:"data:image/webp;base64,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",
@@ -365,7 +383,7 @@ const TIPS = [
  "濃霧關：被冚住嘅牌一律反轉，只信表層。",
  "搗蛋貓最鍾意偷枱面成雙嘅牌 —— 早啲夾走佢！"
 ];
-const LEVELS = 30;
+const LEVELS = 40;
 const TRAY_SIZE = 7;
 
 /* ================= UTIL ================= */
@@ -396,12 +414,12 @@ const sfx={
 
 /* ================= LEVEL CONFIG ================= */
 const CFG = {
-  types:  [10,10,11,11,12,12,12,13,13,14,14,15,15,15,16,16,17,17,18,18,18,19,19,19,20,20,20,20,20,20],
-  triples:[ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-  layers: [ 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9,10,10,10,10,10,10,10,10],
-  blind:  [ 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8]
+  types:  [10,10,11,11,12,12,12,13,13,14,14,15,15,15, 16,16,16,16,16, 17,17,17,17,17, 18,18,18,18,18,18,18, 19,19,19, 20,20,20,20,20,20],
+  triples:new Array(40).fill(3),
+  layers: [6,6,6,6, 7,7,7,7,7,7, 8,8,8,8,8,8,8,8,8,8, 9,9,9,9,9,9,9,9,9,9,9,9, 10,10,10,10,10,10,10,10],
+  blind:  [4,4,4,4, 5,5,5,5,5,5, 6,6,6,6,6,6,6,6,6,6,6, 7,7,7,7,7,7,7,7,7,7,7,7, 8,8,8,8,8,8,8]
 };
-const DEEP_FOG = new Set([12,14,17,19,21,23,25,27,28,29,30]);
+const DEEP_FOG = new Set([12,14,17,19,21,23,25,27,29,31,33,35,37,38,39,40]);
 function levelConf(lv){
   const i=Math.min(lv,LEVELS)-1;
   return {types:CFG.types[i], triples:CFG.triples[i], layers:CFG.layers[i],
@@ -414,8 +432,39 @@ let S = null; // current level state
 let totalScore = 0, curLevel = 1;
 const SAVE_KEY = "nekoStackSave.v3";
 function loadSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY))||{}}catch(e){return{}}}
+const BOARD_KEY="nekoStackBoard.v1";
+function saveBoard(){
+  if(devRun||!S||S.over)return;
+  try{
+    localStorage.setItem(BOARD_KEY,JSON.stringify({
+      lv:S.lv,bossId:S.bossId,badId:S.badId||0,
+      tiles:S.tiles,tray:S.tray.map(t=>t.id),history:S.history,
+      score:S.score,tools:S.tools,mis:S.mis,W:S.W,H:S.H
+    }));
+  }catch(e){}
+}
+function clearBoard(){localStorage.removeItem(BOARD_KEY)}
+function restoreBoard(){
+  try{
+    const b=JSON.parse(localStorage.getItem(BOARD_KEY));
+    if(!b || b.lv!==(loadSave().level||1)) return false;
+    devRun=false;
+    curLevel=b.lv;
+    S={lv:b.lv,conf:levelConf(b.lv),bossId:b.bossId,badId:b.badId||0,
+       tiles:b.tiles,tray:[],history:b.history||[],score:b.score||0,
+       tools:b.tools,over:false,W:b.W||12,H:b.H||13,mis:b.mis||null};
+    S.tray=(b.tray||[]).map(id=>S.tiles.find(t=>t.id===id)).filter(Boolean);
+    const boss=CATS[S.bossId-1];
+    $("#bossImg").src=CAT_IMG[boss.id];
+    $("#bossName").textContent=boss.name;
+    show(null);render();
+    toast("▶ 已回復上次牌局");
+    return true;
+  }catch(e){return false}
+}
 function save(extra){
   if(devRun)return;
+  saveBoard();
   const old=loadSave();
   localStorage.setItem(SAVE_KEY,JSON.stringify({
     level:curLevel,score:totalScore,
@@ -532,7 +581,7 @@ function generateLevel(lv){
 
   return {lv, conf, bossId, badId, tiles, tray:[], history:[], score:0,
           tools, over:false, W, H,
-          mis: badId? {interval:30, counter:30} : null};
+          mis: badId? {interval: lv>=25?25:30, counter: lv>=25?25:30} : null};
 }
 
 /* blocking rules */
@@ -808,7 +857,7 @@ $("#btnUndo").addEventListener("click",()=>{
   S.tray.splice(S.tray.indexOf(t),1);
   t.state="board";
   if(t.stack===undefined && t.x===undefined){} // safety
-  S.tools.undo=false;sfx.tool();render();
+  S.tools.undo=false;sfx.tool();render();saveBoard();
 });
 $("#btnPop").addEventListener("click",()=>{
   if(!S.tools.pop||S.over||S.morphLock||S.tray.length<1)return;
@@ -821,7 +870,7 @@ $("#btnPop").addEventListener("click",()=>{
     t.z=maxZ;t.x=2+i*4;t.y=S.H-2;
     S.history=S.history.filter(h=>h!==t.id);
   }
-  S.tools.pop=false;sfx.tool();render();
+  S.tools.pop=false;sfx.tool();render();saveBoard();
 });
 $("#btnShuffle").addEventListener("click",()=>{
   if(!S.tools.shuffle||S.over||S.morphLock)return;
@@ -829,7 +878,7 @@ $("#btnShuffle").addEventListener("click",()=>{
   const types=onBoard.map(t=>t.type);
   for(let i=types.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[types[i],types[j]]=[types[j],types[i]]}
   onBoard.forEach((t,i)=>t.type=types[i]);
-  S.tools.shuffle=false;sfx.tool();render();
+  S.tools.shuffle=false;sfx.tool();render();saveBoard();
 });
 
 /* ================= FLOW ================= */
@@ -853,6 +902,7 @@ function bossLine(boss,kind){
   return boss[kind];
 }
 function startLevel(lv){
+  if(pendingVer){doReload();return}
   curLevel=lv;
   S=generateLevel(lv);
   const boss=CATS[S.bossId-1];
@@ -873,11 +923,12 @@ function startLevel(lv){
   $("#bossName").textContent=boss.name;
   show("#ovIntro");
   render();
+  saveBoard();
 }
 $("#btnGo").addEventListener("click",()=>{show(null);render()});
 
 function winLevel(){
-  S.over=true;sfx.win();pawBurst();
+  S.over=true;clearBoard();sfx.win();pawBurst();
   const timeBonus=50; // flat for simplicity
   S.score+=100+timeBonus;
   totalScore+=S.score;
@@ -902,7 +953,7 @@ function winLevel(){
   show("#ovWin");
 }
 function loseLevel(){
-  if(S.over)return;S.over=true;sfx.lose();
+  if(S.over)return;S.over=true;clearBoard();sfx.lose();
   const boss=CATS[S.bossId-1];
   $("#lBossImg").src=CAT_IMG[boss.id];
   $("#lTaunt").textContent=bossLine(boss,"lose");
@@ -932,7 +983,13 @@ function initStart(){
   $("#bestTip").textContent=sv.best?`🏅 最高總分：${sv.best}`:"提示：關主牌有 👑，集齊三張有驚喜！";
 }
 $("#btnStart").addEventListener("click",()=>{devRun=false;totalScore=0;startLevel(1)});
-$("#btnContinue").addEventListener("click",()=>{devRun=false;const sv=loadSave();totalScore=sv.score||0;startLevel(sv.level)});
+$("#btnContinue").addEventListener("click",()=>{
+  devRun=false;
+  const sv=loadSave();
+  totalScore=sv.score||0;
+  if(restoreBoard())return;
+  startLevel(sv.level);
+});
 
 
 /* ================= SHARED LEADERBOARD (Supabase REST) ================= */
@@ -946,13 +1003,17 @@ function deviceId(){
   return d;
 }
 function playerName(){return localStorage.getItem("nekoStackName")||""}
+function playerPin(){return localStorage.getItem("nekoStackPin")||""}
 let pendingSubmit=false, afterName=null, declinedName=false;
 async function submitScore(){
   if(!SB_ON)return;
   const sv=loadSave();
   const nm=playerName();
-  if(!nm){if(declinedName)return;pendingSubmit=true;openNameDialog();return}
-  const body={device_id:deviceId(),name:nm,best_level:sv.bestLevel||0,best_score:sv.bestScore||0};
+  if(!nm||!playerPin()){if(declinedName)return;pendingSubmit=true;openNameDialog();return}
+  const body={device_id:deviceId(),name:nm,pin:playerPin(),
+    best_level:sv.bestLevel||0,best_score:sv.bestScore||0,
+    cur_level: curLevel>LEVELS?1:curLevel,
+    cur_score: curLevel>LEVELS?0:totalScore};
   try{
     await fetch(SB_URL+"/rest/v1/stack_scores?on_conflict=device_id",{
       method:"POST",
@@ -986,13 +1047,46 @@ async function openBoard(){
 function openNameDialog(){
   if(!afterName){$("#nameSub").textContent="會顯示喺共享排行榜上";$("#btnNameSkip").style.display="none"}
   $("#nameInput").value=playerName();
+  $("#pinInput").value=playerPin();
   show("#ovName");
   setTimeout(()=>$("#nameInput").focus(),200);
 }
+$("#btnRestore").addEventListener("click",()=>{
+  $("#rName").value="";$("#rPin").value="";$("#rMsg").textContent="";
+  show("#ovRestore");
+});
+$("#btnRestoreCancel").addEventListener("click",()=>{initStart();show("#ovStart")});
+$("#btnRestoreGo").addEventListener("click",async()=>{
+  const n=$("#rName").value.trim(), p=$("#rPin").value.trim();
+  if(!n||!/^\d{4}$/.test(p)){$("#rMsg").textContent="請輸入暱稱同 4 位數字取回碼";return}
+  if(!SB_ON){$("#rMsg").textContent="未連接伺服器";return}
+  $("#rMsg").style.color="var(--ink)";$("#rMsg").textContent="搵緊……";
+  try{
+    const q=SB_URL+"/rest/v1/stack_scores?name=eq."+encodeURIComponent(n)+"&pin=eq."+encodeURIComponent(p)+"&select=device_id,cur_level,cur_score,best_level,best_score&limit=1";
+    const r=await fetch(q,{headers:SB_H});
+    const rows=await r.json();
+    if(!Array.isArray(rows)||!rows.length){$("#rMsg").style.color="#b5364d";$("#rMsg").textContent="搵唔到，請檢查暱稱同取回碼";return}
+    const row=rows[0];
+    localStorage.setItem("nekoStackDev",row.device_id);
+    localStorage.setItem("nekoStackName",n);
+    localStorage.setItem("nekoStackPin",p);
+    const lv=Math.min(Math.max(row.cur_level||1,1),LEVELS);
+    localStorage.setItem(SAVE_KEY,JSON.stringify({level:lv,score:row.cur_score||0,
+      best:row.best_score||0,bestLevel:row.best_level||0,bestScore:row.best_score||0}));
+    $("#rMsg").style.color="var(--ink)";$("#rMsg").textContent="✅ 攞返咗！去到第 "+lv+" 關";
+    setTimeout(()=>{initStart();show("#ovStart")},900);
+  }catch(e){$("#rMsg").style.color="#b5364d";$("#rMsg").textContent="連接失敗，遲啲再試"}
+});
 $("#btnNameSave").addEventListener("click",()=>{
   const v=$("#nameInput").value.trim().slice(0,12);
+  const p=$("#pinInput").value.trim();
   if(!v)return;
+  if(!/^\d{4}$/.test(p)){
+    const pi=$("#pinInput");pi.style.borderColor="var(--rose)";
+    setTimeout(()=>pi.style.borderColor="var(--tile-side)",700);return;
+  }
   localStorage.setItem("nekoStackName",v);
+  localStorage.setItem("nekoStackPin",p);
   if(afterName){
     const a=afterName;afterName=null;
     submitScore();
@@ -1062,6 +1156,43 @@ $("#devCode").addEventListener("keydown",e=>{if(e.key==="Enter")devUnlock()});
 $("#btnDevCancel").addEventListener("click",()=>{initStart();show("#ovStart")});
 $("#btnDevClose").addEventListener("click",()=>{initStart();show("#ovStart")});
 
+/* ================= AUTO-UPDATE ================= */
+let pendingVer=false, lastVerCheck=0;
+function doReload(){
+  toast("🔄 更新緊新版本…");
+  setTimeout(()=>location.replace(location.pathname+"?u="+Date.now()),900);
+}
+async function checkVersion(){
+  const now=Date.now();
+  if(now-lastVerCheck<60000)return; // at most once a minute
+  lastVerCheck=now;
+  try{
+    const r=await fetch(location.pathname,{cache:"no-store"});
+    if(!r.ok)return;
+    const txt=await r.text();
+    const m=txt.match(/GAME_VERSION="([^"]+)"/);
+    if(m && m[1]!==GAME_VERSION){
+      pendingVer=true;
+      // reload immediately only when it can't cost a run
+      const onTitle=$("#ovStart").classList.contains("show");
+      if(!S || S.over || onTitle) doReload();
+    }
+  }catch(e){/* offline: try again later */}
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkVersion()});
+window.addEventListener("focus",()=>checkVersion());
+setTimeout(checkVersion,4000);
+
+/* one-time season migration: curve rebalance — clamp anyone past L15 back to 15 */
+(function(){
+  if(localStorage.getItem("nekoStackMig1"))return;
+  const sv=loadSave();
+  let ch=false;
+  if((sv.level||1)>15){sv.level=15;ch=true}
+  if((sv.bestLevel||0)>15){sv.bestLevel=15;ch=true}
+  if(ch)localStorage.setItem(SAVE_KEY,JSON.stringify(sv));
+  localStorage.setItem("nekoStackMig1","1");
+})();
 window.addEventListener("resize",()=>{if(S&&!S.over)render()});
 initStart();
 </script>
