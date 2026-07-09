@@ -200,10 +200,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
   <div id="boardWrap"><div id="board"></div></div>
 
   <div id="trayZone">
-    <div id="misBadge" style="display:none;align-items:center;justify-content:center;gap:6px;margin-bottom:5px;
-      font-weight:800;font-size:13px;color:var(--paper)">
-      <img id="misImg" style="width:24px;height:24px;border-radius:50%;background:var(--ivory);border:2px solid var(--rose)">
-      <span id="misLabel"></span><b id="misCount" style="color:var(--rose);font-size:16px"></b>
+    <div id="subTray" style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:5px;min-height:26px">
+      <div id="tileBadge" style="display:flex;align-items:center;gap:5px;font-weight:800;font-size:13px;color:var(--paper);opacity:.85">
+        🧩 剩餘 <b id="tcNow" style="color:var(--gold);font-size:15px"></b><span style="opacity:.65">/</span><span id="tcTotal" style="opacity:.65"></span>
+      </div>
+      <div id="misBadge" style="display:none;align-items:center;gap:6px;font-weight:800;font-size:13px;color:var(--paper)">
+        <img id="misImg" style="width:24px;height:24px;border-radius:50%;background:var(--ivory);border:2px solid var(--rose)">
+        <span id="misLabel"></span><b id="misCount" style="color:var(--rose);font-size:16px"></b>
+      </div>
     </div>
     <div id="tray"></div>
   </div>
@@ -648,6 +652,9 @@ function render(){
       },1550);
     }else{S.morphLock=false}
   }
+  const left=S.tiles.filter(t=>t.state!=="gone").length;
+  $("#tcNow").textContent=left;
+  $("#tcTotal").textContent=S.tiles.length;
   const badge=$("#misBadge");
   if(S.mis){
     const canSteal=S.tiles.some(t=>t.state==="board"&&!t.stack&&t.type==="c"+S.badId&&isBlocked(t));
