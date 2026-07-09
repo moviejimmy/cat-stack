@@ -361,7 +361,7 @@ const TIPS = [
  "濃霧關：被冚住嘅牌一律反轉，只信表層。",
  "搗蛋貓最鍾意偷枱面成雙嘅牌 —— 早啲夾走佢！"
 ];
-const LEVELS = 20;
+const LEVELS = 30;
 const TRAY_SIZE = 7;
 
 /* ================= UTIL ================= */
@@ -392,17 +392,17 @@ const sfx={
 
 /* ================= LEVEL CONFIG ================= */
 const CFG = {
-  types:  [13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,20,20,20,20],
-  triples:[ 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
-  layers: [ 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9,10,10,10,10,10,10,10,10],
-  blind:  [ 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9,10,10,10,11,11,12,12,12,12]
+  types:  [10,10,11,11,12,12,12,13,13,14,14,15,15,15,16,16,17,17,18,18,18,19,19,19,20,20,20,20,20,20],
+  triples:[ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+  layers: [ 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9,10,10,10,10,10,10,10,10],
+  blind:  [ 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8]
 };
-const DEEP_FOG = new Set([6,8,10,13,14,17,18,19,20]);
+const DEEP_FOG = new Set([12,14,17,19,21,23,25,27,28,29,30]);
 function levelConf(lv){
   const i=Math.min(lv,LEVELS)-1;
   return {types:CFG.types[i], triples:CFG.triples[i], layers:CFG.layers[i],
-          blind:CFG.blind[i], stackB: lv>=2 ? CFG.blind[i] : 0,
-          fog:true, deepFog:DEEP_FOG.has(lv), deepBurial: lv>=4, mischief: lv>=11};
+          blind:CFG.blind[i], stackB: CFG.blind[i],
+          fog:true, deepFog:DEEP_FOG.has(lv), deepBurial: lv>=10, mischief: lv>=16};
 }
 
 /* ================= STATE ================= */
